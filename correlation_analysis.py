@@ -228,7 +228,13 @@ def generate_correlation_report(df):
     
     print(f"\n1. Corrélation avec le niveau d'éducation:")
     print(f"   - Significative: {'Oui' if education_corr['correlation_stats']['significant'] else 'Non'}")
-    print(f"   - Tendance: {'Moins d\\'exposition avec plus d\\'éducation' if education_corr['trend'] == 'negative' else 'Plus d\\'exposition avec plus d\\'éducation'}")
+    
+    # Déterminer le message de tendance
+    if education_corr['trend'] == 'negative':
+        tendance_msg = "Moins d'exposition avec plus d'éducation"
+    else:
+        tendance_msg = "Plus d'exposition avec plus d'éducation"
+    print(f"   - Tendance: {tendance_msg}")
     
     print(f"\n2. Corrélation avec l'âge:")
     print(f"   - Coefficient de corrélation: {age_corr['correlation_stats']['pearson_r']:.3f}")
@@ -239,9 +245,12 @@ def generate_correlation_report(df):
     
     print(f"\n4. Profils à risque:")
     print(f"   - Nombre d'agriculteurs à haut risque: {combined['high_risk_profile']['count']}")
-    print(f"   - Âge moyen: {combined['high_risk_profile']['avg_age']:.1f} ans")
+    if not np.isnan(combined['high_risk_profile']['avg_age']):
+        print(f"   - Âge moyen: {combined['high_risk_profile']['avg_age']:.1f} ans")
+    else:
+        print(f"   - Âge moyen: Non disponible")
     
-    print(f"\n5. Recommandations prioritaires:")
+    print("\n5. Recommandations prioritaires:")
     for key, rec in combined['targeted_recommendations'].items():
         if rec['target']:
             print(f"   - {rec['message']}")
