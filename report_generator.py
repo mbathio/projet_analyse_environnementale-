@@ -58,10 +58,10 @@ class ReportGenerator:
         
         self.story.append(Spacer(1, 2*inch))
         
-        # Informations de base
+        # Informations de base - CORRECTION ICI
         info_text = f"""
         <b>Date du rapport:</b> {datetime.now().strftime('%d/%m/%Y')}<br/>
-        <b>Nombre d'agriculteurs enquêtés:</b> {report_data['impact']['summary']['total_farmers']}<br/>
+        <b>Nombre d'agriculteurs enquêtés:</b> {report_data['summary']['total_farmers']}<br/>
         <b>Zones couvertes:</b> Vallée du fleuve Sénégal<br/>
         <b>Période d'enquête:</b> Juin-Juillet 2025
         """
@@ -74,17 +74,26 @@ class ReportGenerator:
         """Ajoute le résumé exécutif"""
         self.story.append(Paragraph("RÉSUMÉ EXÉCUTIF", self.heading_style))
         
+        # Vérifier que les clés existent avant d'y accéder
+        total_farmers = all_reports.get('impact', {}).get('summary', {}).get('total_farmers', 'N/A')
+        main_practice = all_reports.get('impact', {}).get('summary', {}).get('main_harmful_practice', 'N/A')
+        deforestation_rate = all_reports.get('impact', {}).get('summary', {}).get('deforestation_rate', 0)
+        biodiversity_impact = all_reports.get('impact', {}).get('summary', {}).get('biodiversity_impact_rate', 0)
+        avg_water = all_reports.get('water', {}).get('summary', {}).get('average_consumption_m3', 0)
+        untrained = all_reports.get('health', {}).get('summary', {}).get('untrained_count', 0)
+        no_protection = all_reports.get('health', {}).get('summary', {}).get('no_protection_count', 0)
+        
         summary_text = f"""
         Cette étude analyse les impacts environnementaux et sanitaires des pratiques rizicoles dans la vallée du fleuve Sénégal. 
-        L'enquête a porté sur {all_reports['impact']['summary']['total_farmers']} agriculteurs et révèle des enjeux majeurs :
+        L'enquête a porté sur {total_farmers} agriculteurs et révèle des enjeux majeurs :
         
         <b>Principaux constats :</b><br/>
-        • <b>Pratiques nuisibles:</b> {all_reports['impact']['summary']['main_harmful_practice']} est la pratique la plus répandue<br/>
-        • <b>Déforestation:</b> {all_reports['impact']['summary']['deforestation_rate']:.1f}% des agriculteurs mentionnent des impacts<br/>
-        • <b>Biodiversité:</b> {all_reports['impact']['summary']['biodiversity_impact_rate']:.1f}% reportent des impacts négatifs<br/>
-        • <b>Eau:</b> Consommation moyenne de {all_reports['water']['summary']['average_consumption_m3']:,.0f} m³/ha<br/>
-        • <b>Pesticides:</b> {all_reports['health']['summary']['untrained_count']} agriculteurs non formés à leur utilisation<br/>
-        • <b>Protection:</b> {all_reports['health']['summary']['no_protection_count']} agriculteurs sans équipement de protection<br/>
+        • <b>Pratiques nuisibles:</b> {main_practice} est la pratique la plus répandue<br/>
+        • <b>Déforestation:</b> {deforestation_rate:.1f}% des agriculteurs mentionnent des impacts<br/>
+        • <b>Biodiversité:</b> {biodiversity_impact:.1f}% reportent des impacts négatifs<br/>
+        • <b>Eau:</b> Consommation moyenne de {avg_water:,.0f} m³/ha<br/>
+        • <b>Pesticides:</b> {untrained} agriculteurs non formés à leur utilisation<br/>
+        • <b>Protection:</b> {no_protection} agriculteurs sans équipement de protection<br/>
         
         <b>Recommandations prioritaires :</b><br/>
         1. Formation urgente sur l'utilisation sécurisée des pesticides<br/>
@@ -124,25 +133,30 @@ class ReportGenerator:
     
     def add_section_with_image(self, title, content, image_name=None):
         """Ajoute une section avec texte et image optionnelle"""
-        self.story.append(Paragraph(title, self.heading_style))
-        self.story.append(Paragraph(content, self.normal_style))
+        if title:
+            self.story.append(Paragraph(title, self.heading_style))
+        if content:
+            self.story.append(Paragraph(content, self.normal_style))
         
         if image_name and os.path.exists(GRAPHS_DIR / image_name):
             self.story.append(Spacer(1, 0.2*inch))
-            img = Image(str(GRAPHS_DIR / image_name), width=6*inch, height=4*inch)
-            self.story.append(img)
-            self.story.append(Spacer(1, 0.3*inch))
+            try:
+                img = Image(str(GRAPHS_DIR / image_name), width=6*inch, height=4*inch)
+                self.story.append(img)
+                self.story.append(Spacer(1, 0.3*inch))
+            except Exception as e:
+                print(f"⚠️ Impossible de charger l'image {image_name}: {e}")
     
     def add_harmful_practices_section(self, report_data):
         """Ajoute la section sur les pratiques nuisibles"""
-        practices = report_data['harmful_practices']
+        practices = report_data.get('harmful_practices', {})
         
         content = "<b>Pratiques agricoles nuisibles identifiées :</b><br/><br/>"
         
         for practice, data in practices.items():
-            if data['percentage'] > 20:  # Seuil significatif
-                content += f"• <b>{data['description']}:</b> {data['percentage']:.1f}% des agriculteurs<br/>"
-                content += f"  Impact: {data['impact']}<br/><br/>"
+            if data.get('percentage', 0) > 20:  # Seuil significatif
+                content += f"• <b>{data.get('description', 'N/A')}:</b> {data.get('percentage', 0):.1f}% des agriculteurs<br/>"
+                content += f"  Impact: {data.get('impact', 'N/A')}<br/><br/>"
         
         self.add_section_with_image(
             "PRATIQUES AGRICOLES NUISIBLES",
@@ -152,19 +166,19 @@ class ReportGenerator:
     
     def add_environmental_impact_section(self, report_data):
         """Ajoute la section sur les impacts environnementaux"""
-        deforestation = report_data['deforestation']
-        biodiversity = report_data['biodiversity']
+        deforestation = report_data.get('deforestation', {})
+        biodiversity = report_data.get('biodiversity', {})
         
         content = f"""
         <b>Déforestation :</b><br/>
-        {deforestation['percentage']:.1f}% des agriculteurs mentionnent des activités de déforestation. 
-        L'évolution des surfaces cultivées montre une augmentation de {deforestation['surface_evolution']['2023']} ha 
-        en 2023 à {deforestation['surface_evolution']['2025']} ha en 2025.<br/><br/>
+        {deforestation.get('percentage', 0):.1f}% des agriculteurs mentionnent des activités de déforestation. 
+        L'évolution des surfaces cultivées montre une augmentation de {deforestation.get('surface_evolution', {}).get('2023', 0)} ha 
+        en 2023 à {deforestation.get('surface_evolution', {}).get('2025', 0)} ha en 2025.<br/><br/>
         
         <b>Impact sur la biodiversité :</b><br/>
-        {biodiversity['percentage_negative_impact']:.1f}% des agriculteurs reportent un impact négatif sur la biodiversité. 
-        Les agriculteurs utilisant des pesticides montrent un taux d'impact de {biodiversity['correlation_with_pesticides']['with_pesticides']:.1f}% 
-        contre {biodiversity['correlation_with_pesticides']['without_pesticides']:.1f}% pour ceux n'en utilisant pas.
+        {biodiversity.get('percentage_negative_impact', 0):.1f}% des agriculteurs reportent un impact négatif sur la biodiversité. 
+        Les agriculteurs utilisant des pesticides montrent un taux d'impact de {biodiversity.get('correlation_with_pesticides', {}).get('with_pesticides', 0):.1f}% 
+        contre {biodiversity.get('correlation_with_pesticides', {}).get('without_pesticides', 0):.1f}% pour ceux n'en utilisant pas.
         """
         
         self.add_section_with_image(
@@ -181,25 +195,25 @@ class ReportGenerator:
     
     def add_health_exposure_section(self, report_data):
         """Ajoute la section sur l'exposition sanitaire"""
-        pesticide = report_data['pesticide_exposure']
-        fertilizer = report_data['fertilizer_exposure']
-        vulnerable = report_data['vulnerable_groups']
+        pesticide = report_data.get('pesticide_exposure', {})
+        fertilizer = report_data.get('fertilizer_exposure', {})
+        vulnerable = report_data.get('vulnerable_groups', {})
         
         content = f"""
         <b>Exposition aux pesticides :</b><br/>
-        • Agriculteurs à exposition élevée : {pesticide['exposure_levels']['high']}<br/>
-        • Sans protection adéquate : {pesticide['protection_usage']['none']}<br/>
-        • Non formés : {pesticide['training']['not_trained']}<br/>
-        • Cas d'intoxication reportés : {pesticide['health_impacts']['intoxication_cases']}<br/><br/>
+        • Agriculteurs à exposition élevée : {pesticide.get('exposure_levels', {}).get('high', 0)}<br/>
+        • Sans protection adéquate : {pesticide.get('protection_usage', {}).get('none', 0)}<br/>
+        • Non formés : {pesticide.get('training', {}).get('not_trained', 0)}<br/>
+        • Cas d'intoxication reportés : {pesticide.get('health_impacts', {}).get('intoxication_cases', 0)}<br/><br/>
         
         <b>Utilisation d'engrais chimiques :</b><br/>
-        Quantité moyenne utilisée : {fertilizer['average_quantity']:.1f} unités/ha<br/>
-        Gestion dangereuse des déchets : {fertilizer['dangerous_practices_count']} cas<br/><br/>
+        Quantité moyenne utilisée : {fertilizer.get('average_quantity', 0):.1f} unités/ha<br/>
+        Gestion dangereuse des déchets : {fertilizer.get('dangerous_practices_count', 0)} cas<br/><br/>
         
         <b>Groupes vulnérables :</b><br/>
-        • Travail des enfants : {vulnerable['percentage_employing_vulnerable']['children']:.1f}% des exploitations<br/>
-        • Femmes employées : {vulnerable['percentage_employing_vulnerable']['women']:.1f}%<br/>
-        • Jeunes employés : {vulnerable['percentage_employing_vulnerable']['youth']:.1f}%
+        • Travail des enfants : {vulnerable.get('percentage_employing_vulnerable', {}).get('children', 0):.1f}% des exploitations<br/>
+        • Femmes employées : {vulnerable.get('percentage_employing_vulnerable', {}).get('women', 0):.1f}%<br/>
+        • Jeunes employés : {vulnerable.get('percentage_employing_vulnerable', {}).get('youth', 0):.1f}%
         """
         
         self.add_section_with_image(
@@ -210,25 +224,26 @@ class ReportGenerator:
     
     def add_water_usage_section(self, report_data):
         """Ajoute la section sur l'utilisation de l'eau"""
-        consumption = report_data['consumption']
-        irrigation = report_data['irrigation']
-        management = report_data['management']
+        consumption = report_data.get('consumption', {})
+        irrigation = report_data.get('irrigation', {})
+        management = report_data.get('management', {})
+        summary = report_data.get('summary', {})
         
         content = f"""
         <b>Consommation d'eau :</b><br/>
-        • Moyenne : {consumption['statistics']['mean']:,.0f} m³/ha<br/>
-        • Volume total estimé : {consumption['total_estimation']['total_water_volume_m3']:,.0f} m³<br/>
-        • Surconsommation (>16250 m³/ha) : {report_data['summary']['high_consumption_percentage']:.1f}% des agriculteurs<br/><br/>
+        • Moyenne : {consumption.get('statistics', {}).get('mean', 0):,.0f} m³/ha<br/>
+        • Volume total estimé : {consumption.get('total_estimation', {}).get('total_water_volume_m3', 0):,.0f} m³<br/>
+        • Surconsommation (>16250 m³/ha) : {summary.get('high_consumption_percentage', 0):.1f}% des agriculteurs<br/><br/>
         
         <b>Méthodes d'irrigation :</b><br/>
-        • Pompage : {irrigation['efficiency_indicators']['pompage_percentage']:.1f}%<br/>
-        • Énergie solaire : {irrigation['efficiency_indicators']['solar_energy_percentage']:.1f}%<br/>
-        • Dépendance au fleuve Sénégal : {irrigation['efficiency_indicators']['river_dependency']:.1f}%<br/><br/>
+        • Pompage : {irrigation.get('efficiency_indicators', {}).get('pompage_percentage', 0):.1f}%<br/>
+        • Énergie solaire : {irrigation.get('efficiency_indicators', {}).get('solar_energy_percentage', 0):.1f}%<br/>
+        • Dépendance au fleuve Sénégal : {irrigation.get('efficiency_indicators', {}).get('river_dependency', 0):.1f}%<br/><br/>
         
         <b>Système de Riziculture Intensive (SRI) :</b><br/>
-        • Connaissent et appliquent : {management['sri_adoption']['knows_and_applies']} agriculteurs<br/>
-        • Connaissent mais n'appliquent pas : {management['sri_adoption']['knows_but_not_applied']} agriculteurs<br/>
-        • Taux d'adoption : {report_data['summary']['sri_adoption_rate']:.1f}%
+        • Connaissent et appliquent : {management.get('sri_adoption', {}).get('knows_and_applies', 0)} agriculteurs<br/>
+        • Connaissent mais n'appliquent pas : {management.get('sri_adoption', {}).get('knows_but_not_applied', 0)} agriculteurs<br/>
+        • Taux d'adoption : {summary.get('sri_adoption_rate', 0):.1f}%
         """
         
         self.add_section_with_image(
@@ -239,28 +254,28 @@ class ReportGenerator:
     
     def add_correlation_section(self, report_data):
         """Ajoute la section sur les corrélations"""
-        education = report_data['education']
-        age = report_data['age']
-        combined = report_data['combined_analysis']
+        education = report_data.get('education', {})
+        age = report_data.get('age', {})
+        combined = report_data.get('combined_analysis', {})
         
         content = f"""
         <b>Corrélations identifiées :</b><br/>
         
-        • <b>Niveau d'éducation :</b> {('Corrélation significative' if education['correlation_stats']['significant'] else 'Pas de corrélation significative')} 
-        avec l'exposition aux pesticides (tendance {education['trend']})<br/><br/>
+        • <b>Niveau d'éducation :</b> {('Corrélation significative' if education.get('correlation_stats', {}).get('significant', False) else 'Pas de corrélation significative')} 
+        avec l'exposition aux pesticides (tendance {education.get('trend', 'N/A')})<br/><br/>
         
-        • <b>Âge :</b> Coefficient de corrélation = {age['correlation_stats']['pearson_r']:.3f} 
-        {('(significatif)' if age['correlation_stats']['significant'] else '(non significatif)')}<br/><br/>
+        • <b>Âge :</b> Coefficient de corrélation = {age.get('correlation_stats', {}).get('pearson_r', 0):.3f} 
+        {('(significatif)' if age.get('correlation_stats', {}).get('significant', False) else '(non significatif)')}<br/><br/>
         
-        • <b>Profils à risque :</b> {combined['high_risk_profile']['count']} agriculteurs identifiés comme à haut risque<br/>
-        Âge moyen : {combined['high_risk_profile']['avg_age']:.1f} ans<br/><br/>
+        • <b>Profils à risque :</b> {combined.get('high_risk_profile', {}).get('count', 0)} agriculteurs identifiés comme à haut risque<br/>
+        Âge moyen : {combined.get('high_risk_profile', {}).get('avg_age', 0):.1f} ans<br/><br/>
         
         <b>Recommandations ciblées :</b><br/>
         """
         
-        for key, rec in combined['targeted_recommendations'].items():
-            if rec['target']:
-                content += f"• {rec['message']}<br/>"
+        for key, rec in combined.get('targeted_recommendations', {}).items():
+            if rec.get('target', False):
+                content += f"• {rec.get('message', 'N/A')}<br/>"
         
         self.add_section_with_image(
             "ANALYSE SOCIO-DÉMOGRAPHIQUE",
@@ -311,72 +326,93 @@ class ReportGenerator:
         """Génère le rapport complet"""
         print("Génération du rapport PDF...")
         
-        # Page de titre
-        self.add_title_page(all_reports['impact'])
-        
-        # Résumé exécutif
-        self.add_executive_summary(all_reports)
-        
-        # Méthodologie
-        self.add_methodology()
-        
-        # Sections principales
-        self.add_harmful_practices_section(all_reports['impact'])
-        self.story.append(PageBreak())
-        
-        self.add_environmental_impact_section(all_reports['impact'])
-        self.story.append(PageBreak())
-        
-        self.add_health_exposure_section(all_reports['health'])
-        self.story.append(PageBreak())
-        
-        self.add_water_usage_section(all_reports['water'])
-        self.story.append(PageBreak())
-        
-        self.add_correlation_section(all_reports['correlation'])
-        
-        # Recommandations
-        self.add_recommendations()
-        
-        # Générer le PDF
-        self.doc.build(self.story)
-        print(f"✓ Rapport généré : {self.filename}")
+        try:
+            # Page de titre - Passer directement les données d'impact
+            self.add_title_page(all_reports.get('impact', {}))
+            
+            # Résumé exécutif
+            self.add_executive_summary(all_reports)
+            
+            # Méthodologie
+            self.add_methodology()
+            
+            # Sections principales
+            if 'impact' in all_reports:
+                self.add_harmful_practices_section(all_reports['impact'])
+                self.story.append(PageBreak())
+                
+                self.add_environmental_impact_section(all_reports['impact'])
+                self.story.append(PageBreak())
+            
+            if 'health' in all_reports:
+                self.add_health_exposure_section(all_reports['health'])
+                self.story.append(PageBreak())
+            
+            if 'water' in all_reports:
+                self.add_water_usage_section(all_reports['water'])
+                self.story.append(PageBreak())
+            
+            if 'correlation' in all_reports:
+                self.add_correlation_section(all_reports['correlation'])
+            
+            # Recommandations
+            self.add_recommendations()
+            
+            # Générer le PDF
+            self.doc.build(self.story)
+            print(f"✓ Rapport généré : {self.filename}")
+            
+        except Exception as e:
+            print(f"✗ Erreur lors de la génération du rapport PDF : {e}")
+            import traceback
+            traceback.print_exc()
 
 def create_summary_table(all_reports):
     """Crée un tableau récapitulatif en format texte"""
     
     summary_file = REPORTS_DIR / "resume_executif.txt"
     
-    with open(summary_file, 'w', encoding='utf-8') as f:
-        f.write("RÉSUMÉ EXÉCUTIF - ANALYSE ENVIRONNEMENTALE ET SANITAIRE\n")
-        f.write("="*60 + "\n\n")
+    try:
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            f.write("RÉSUMÉ EXÉCUTIF - ANALYSE ENVIRONNEMENTALE ET SANITAIRE\n")
+            f.write("="*60 + "\n\n")
+            
+            f.write("INDICATEURS CLÉS\n")
+            f.write("-"*30 + "\n")
+            
+            # Utiliser .get() pour éviter les KeyError
+            impact_summary = all_reports.get('impact', {}).get('summary', {})
+            water_summary = all_reports.get('water', {}).get('summary', {})
+            health_summary = all_reports.get('health', {}).get('summary', {})
+            
+            f.write(f"Agriculteurs enquêtés: {impact_summary.get('total_farmers', 'N/A')}\n")
+            f.write(f"Taux de déforestation: {impact_summary.get('deforestation_rate', 0):.1f}%\n")
+            f.write(f"Impact sur biodiversité: {impact_summary.get('biodiversity_impact_rate', 0):.1f}%\n")
+            f.write(f"Consommation eau moyenne: {water_summary.get('average_consumption_m3', 0):,.0f} m³/ha\n")
+            f.write(f"Sans protection pesticides: {health_summary.get('no_protection_count', 0)} agriculteurs\n")
+            f.write(f"Travail des enfants: {health_summary.get('child_labor_rate', 0):.1f}%\n")
+            f.write("\n")
+            
+            f.write("PRATIQUES NUISIBLES PRINCIPALES\n")
+            f.write("-"*30 + "\n")
+            harmful_practices = all_reports.get('impact', {}).get('harmful_practices', {})
+            for practice, data in harmful_practices.items():
+                if data.get('percentage', 0) > 30:
+                    f.write(f"- {data.get('description', 'N/A')}: {data.get('percentage', 0):.1f}%\n")
+            f.write("\n")
+            
+            f.write("RECOMMANDATIONS PRIORITAIRES\n")
+            f.write("-"*30 + "\n")
+            f.write("1. Formation urgente sur utilisation sécurisée des pesticides\n")
+            f.write("2. Promotion du Système de Riziculture Intensive (SRI)\n")
+            f.write("3. Mise en place de systèmes de collecte des déchets chimiques\n")
+            f.write("4. Protection renforcée des groupes vulnérables\n")
+            f.write("5. Programme de reboisement et conservation biodiversité\n")
         
-        f.write("INDICATEURS CLÉS\n")
-        f.write("-"*30 + "\n")
-        f.write(f"Agriculteurs enquêtés: {all_reports['impact']['summary']['total_farmers']}\n")
-        f.write(f"Taux de déforestation: {all_reports['impact']['summary']['deforestation_rate']:.1f}%\n")
-        f.write(f"Impact sur biodiversité: {all_reports['impact']['summary']['biodiversity_impact_rate']:.1f}%\n")
-        f.write(f"Consommation eau moyenne: {all_reports['water']['summary']['average_consumption_m3']:,.0f} m³/ha\n")
-        f.write(f"Sans protection pesticides: {all_reports['health']['summary']['no_protection_count']} agriculteurs\n")
-        f.write(f"Travail des enfants: {all_reports['health']['summary']['child_labor_rate']:.1f}%\n")
-        f.write("\n")
+        print(f"✓ Résumé exécutif créé : {summary_file}")
         
-        f.write("PRATIQUES NUISIBLES PRINCIPALES\n")
-        f.write("-"*30 + "\n")
-        for practice, data in all_reports['impact']['harmful_practices'].items():
-            if data['percentage'] > 30:
-                f.write(f"- {data['description']}: {data['percentage']:.1f}%\n")
-        f.write("\n")
-        
-        f.write("RECOMMANDATIONS PRIORITAIRES\n")
-        f.write("-"*30 + "\n")
-        f.write("1. Formation urgente sur utilisation sécurisée des pesticides\n")
-        f.write("2. Promotion du Système de Riziculture Intensive (SRI)\n")
-        f.write("3. Mise en place de systèmes de collecte des déchets chimiques\n")
-        f.write("4. Protection renforcée des groupes vulnérables\n")
-        f.write("5. Programme de reboisement et conservation biodiversité\n")
-    
-    print(f"✓ Résumé exécutif créé : {summary_file}")
+    except Exception as e:
+        print(f"✗ Erreur lors de la création du résumé : {e}")
 
 if __name__ == "__main__":
     print("Module de génération de rapport prêt")

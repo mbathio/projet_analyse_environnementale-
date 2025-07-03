@@ -9,9 +9,7 @@ __pycache__/
 
 
 
-# Résultats temporaires
-resultats/graphiques/*.png
-resultats/rapports/*.pdf
+
 
 # IDE
 .vscode/
