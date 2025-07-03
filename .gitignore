@@ -1,0 +1,23 @@
+# Environnements virtuels
+env_analyse/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+
+
+# Résultats temporaires
+resultats/graphiques/*.png
+resultats/rapports/*.pdf
+
+# IDE
+.vscode/
+.idea/
+
+# Garder les dossiers
+!data/.gitkeep
+!resultats/graphiques/.gitkeep
+!resultats/rapports/.gitkeep
